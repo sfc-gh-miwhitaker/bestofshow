@@ -27,7 +27,25 @@
  */
 
 -- ============================================================================
--- STEP 0: EXPIRATION CHECK (MANDATORY)
+-- CONTEXT SETTING (MANDATORY)
+-- ============================================================================
+USE ROLE SYSADMIN;
+
+-- ============================================================================
+-- STEP 1: CREATE WAREHOUSE (Account-level, SFE_ prefix)
+-- Must create and use warehouse BEFORE any SELECT statements
+-- ============================================================================
+CREATE OR REPLACE WAREHOUSE SFE_EVENT_INTELLIGENCE_WH
+    WAREHOUSE_SIZE = 'XSMALL'
+    AUTO_SUSPEND = 60
+    AUTO_RESUME = TRUE
+    INITIALLY_SUSPENDED = TRUE
+    COMMENT = 'DEMO: Event Intelligence Platform | Author: SE Community | Expires: 2026-01-09';
+
+USE WAREHOUSE SFE_EVENT_INTELLIGENCE_WH;
+
+-- ============================================================================
+-- STEP 2: EXPIRATION CHECK (MANDATORY)
 -- ============================================================================
 -- This demo expires 30 days after creation.
 -- If expired, deployment should be halted and the repository forked with updated dates.
@@ -51,17 +69,7 @@ SELECT
 -- Fork the repository and update the expiration date before deploying.
 
 -- ============================================================================
--- STEP 1: CREATE WAREHOUSE (Account-level, SFE_ prefix)
--- ============================================================================
-CREATE OR REPLACE WAREHOUSE SFE_EVENT_INTELLIGENCE_WH
-    WAREHOUSE_SIZE = 'XSMALL'
-    AUTO_SUSPEND = 60
-    AUTO_RESUME = TRUE
-    INITIALLY_SUSPENDED = TRUE
-    COMMENT = 'DEMO: Event Intelligence Platform | Author: SE Community | Expires: 2026-01-09';
-
--- ============================================================================
--- STEP 2: CREATE GIT API INTEGRATION (Account-level, SFE_ prefix)
+-- STEP 3: CREATE GIT API INTEGRATION (Account-level, SFE_ prefix)
 -- ============================================================================
 CREATE OR REPLACE API INTEGRATION SFE_EVENT_INTELLIGENCE_GIT_API_INTEGRATION
     API_PROVIDER = GIT_HTTPS_API
@@ -70,7 +78,7 @@ CREATE OR REPLACE API INTEGRATION SFE_EVENT_INTELLIGENCE_GIT_API_INTEGRATION
     COMMENT = 'DEMO: Git integration for Event Intelligence Platform | Author: SE Community | Expires: 2026-01-09';
 
 -- ============================================================================
--- STEP 3: CREATE DATABASE AND SCHEMAS
+-- STEP 4: CREATE DATABASE AND SCHEMAS
 -- ============================================================================
 CREATE DATABASE IF NOT EXISTS SNOWFLAKE_EXAMPLE
     COMMENT = 'DEMO: Shared database for SE demos | Author: SE Community';
@@ -87,7 +95,7 @@ CREATE SCHEMA IF NOT EXISTS SEMANTIC_MODELS
     COMMENT = 'DEMO: Shared semantic models for Cortex Analyst | Author: SE Community';
 
 -- ============================================================================
--- STEP 4: CREATE GIT REPOSITORY
+-- STEP 5: CREATE GIT REPOSITORY
 -- ============================================================================
 CREATE OR REPLACE GIT REPOSITORY EVENT_INTELLIGENCE_GIT_REPOS.sfe_event_intelligence_repo
     API_INTEGRATION = SFE_EVENT_INTELLIGENCE_GIT_API_INTEGRATION
@@ -98,13 +106,13 @@ CREATE OR REPLACE GIT REPOSITORY EVENT_INTELLIGENCE_GIT_REPOS.sfe_event_intellig
 ALTER GIT REPOSITORY EVENT_INTELLIGENCE_GIT_REPOS.sfe_event_intelligence_repo FETCH;
 
 -- ============================================================================
--- STEP 5: SET EXECUTION CONTEXT
+-- STEP 6: SET EXECUTION CONTEXT
 -- ============================================================================
 USE WAREHOUSE SFE_EVENT_INTELLIGENCE_WH;
 USE SCHEMA EVENT_INTELLIGENCE;
 
 -- ============================================================================
--- STEP 6: EXECUTE SQL SCRIPTS FROM GIT REPOSITORY
+-- STEP 7: EXECUTE SQL SCRIPTS FROM GIT REPOSITORY
 -- ============================================================================
 
 -- 6.1: Setup Scripts
@@ -128,7 +136,7 @@ EXECUTE IMMEDIATE FROM @SNOWFLAKE_EXAMPLE.EVENT_INTELLIGENCE_GIT_REPOS.sfe_event
 EXECUTE IMMEDIATE FROM @SNOWFLAKE_EXAMPLE.EVENT_INTELLIGENCE_GIT_REPOS.sfe_event_intelligence_repo/branches/main/sql/05_streamlit/01_create_dashboard.sql;
 
 -- ============================================================================
--- STEP 7: DEPLOYMENT VERIFICATION
+-- STEP 8: DEPLOYMENT VERIFICATION
 -- ============================================================================
 SELECT '✅ Event Intelligence Platform deployed successfully!' AS status;
 
