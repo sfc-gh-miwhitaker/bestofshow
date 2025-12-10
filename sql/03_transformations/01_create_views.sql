@@ -20,143 +20,187 @@ USE SCHEMA EVENT_INTELLIGENCE;
 -- V_ATTENDEE_ENGAGEMENT: Real-time attendee engagement metrics
 -- =============================================================================
 CREATE OR REPLACE VIEW V_ATTENDEE_ENGAGEMENT
-  COMMENT = 'DEMO: Real-time attendee engagement metrics | Author: SE Community | Expires: 2026-01-09'
+COMMENT
+= 'DEMO: Real-time attendee engagement metrics | Author: SE Community | Expires: 2026-01-09'
 AS
-SELECT 
-    a.attendee_id,
-    a.first_name || ' ' || a.last_name AS full_name,
-    a.email,
-    a.specialty,
-    a.organization,
-    a.registration_date,
-    COALESCE(sc.sessions_attended, 0) AS sessions_attended,
-    COALESCE(bv.booth_visits, 0) AS booth_visits,
-    COALESCE(fb.feedback_count, 0) AS feedback_given,
-    COALESCE(fb.avg_rating, 0) AS avg_rating_given,
+WITH BV AS (
+    SELECT
+        ATTENDEE_ID,
+        COUNT(*) AS BOOTH_VISITS,
+        MAX(VISIT_TIMESTAMP) AS LAST_VISIT
+    FROM RAW_BOOTH_VISITS
+    GROUP BY ATTENDEE_ID
+),
+SC AS (
+    SELECT
+        ATTENDEE_ID,
+        COUNT(*) AS SESSIONS_ATTENDED,
+        MAX(CHECKIN_TIMESTAMP) AS LAST_CHECKIN
+    FROM RAW_SESSION_CHECKINS
+    GROUP BY ATTENDEE_ID
+),
+FB AS (
+    SELECT
+        ATTENDEE_ID,
+        COUNT(*) AS FEEDBACK_COUNT,
+        AVG(RATING) AS AVG_RATING,
+        MAX(SUBMITTED_AT) AS LAST_FEEDBACK
+    FROM RAW_FEEDBACK
+    GROUP BY ATTENDEE_ID
+)
+SELECT
+    A.ATTENDEE_ID,
+    A.EMAIL,
+    A.SPECIALTY,
+    A.ORGANIZATION,
+    A.REGISTRATION_DATE,
+    A.FIRST_NAME || ' ' || A.LAST_NAME AS FULL_NAME,
+    COALESCE(SC.SESSIONS_ATTENDED, 0) AS SESSIONS_ATTENDED,
+    COALESCE(BV.BOOTH_VISITS, 0) AS BOOTH_VISITS,
+    COALESCE(FB.FEEDBACK_COUNT, 0) AS FEEDBACK_GIVEN,
+    COALESCE(FB.AVG_RATING, 0) AS AVG_RATING_GIVEN,
     -- Engagement score: weighted combination of activities
     ROUND(
-        (COALESCE(sc.sessions_attended, 0) * 10) + 
-        (COALESCE(bv.booth_visits, 0) * 5) + 
-        (COALESCE(fb.feedback_count, 0) * 15), 2
-    ) AS engagement_score,
+        (COALESCE(SC.SESSIONS_ATTENDED, 0) * 10)
+        + (COALESCE(BV.BOOTH_VISITS, 0) * 5)
+        + (COALESCE(FB.FEEDBACK_COUNT, 0) * 15), 2
+    ) AS ENGAGEMENT_SCORE,
     GREATEST(
-        COALESCE(sc.last_checkin, a.registration_date),
-        COALESCE(bv.last_visit, a.registration_date),
-        COALESCE(fb.last_feedback, a.registration_date)
-    ) AS last_activity
-FROM RAW_ATTENDEES a
-LEFT JOIN (
-    SELECT attendee_id, 
-           COUNT(*) AS sessions_attended,
-           MAX(checkin_timestamp) AS last_checkin
-    FROM RAW_SESSION_CHECKINS 
-    GROUP BY attendee_id
-) sc ON a.attendee_id = sc.attendee_id
-LEFT JOIN (
-    SELECT attendee_id, 
-           COUNT(*) AS booth_visits,
-           MAX(visit_timestamp) AS last_visit
-    FROM RAW_BOOTH_VISITS 
-    GROUP BY attendee_id
-) bv ON a.attendee_id = bv.attendee_id
-LEFT JOIN (
-    SELECT attendee_id, 
-           COUNT(*) AS feedback_count,
-           AVG(rating) AS avg_rating,
-           MAX(submitted_at) AS last_feedback
-    FROM RAW_FEEDBACK 
-    GROUP BY attendee_id
-) fb ON a.attendee_id = fb.attendee_id;
+        COALESCE(SC.LAST_CHECKIN, A.REGISTRATION_DATE),
+        COALESCE(BV.LAST_VISIT, A.REGISTRATION_DATE),
+        COALESCE(FB.LAST_FEEDBACK, A.REGISTRATION_DATE)
+    ) AS LAST_ACTIVITY
+FROM RAW_ATTENDEES AS A
+LEFT JOIN SC ON A.ATTENDEE_ID = SC.ATTENDEE_ID
+LEFT JOIN BV ON A.ATTENDEE_ID = BV.ATTENDEE_ID
+LEFT JOIN FB ON A.ATTENDEE_ID = FB.ATTENDEE_ID;
 
 -- =============================================================================
 -- V_SESSION_PERFORMANCE: Session attendance and feedback metrics
 -- =============================================================================
 CREATE OR REPLACE VIEW V_SESSION_PERFORMANCE
-  COMMENT = 'DEMO: Session attendance and feedback metrics | Author: SE Community | Expires: 2026-01-09'
+COMMENT
+= 'DEMO: Session attendance and feedback metrics | Author: SE Community | Expires: 2026-01-09'
 AS
-SELECT 
-    s.session_id,
-    s.session_name,
-    s.speaker,
-    s.track,
-    s.room,
-    s.capacity,
-    s.start_time,
-    s.end_time,
-    COALESCE(sc.attendance_count, 0) AS attendance_count,
-    ROUND(COALESCE(sc.attendance_count, 0) * 100.0 / NULLIF(s.capacity, 0), 1) AS capacity_utilization_pct,
-    COALESCE(fb.feedback_count, 0) AS feedback_count,
-    ROUND(COALESCE(fb.avg_rating, 0), 2) AS avg_rating,
-    fb.sample_feedback
-FROM RAW_SESSIONS s
-LEFT JOIN (
-    SELECT session_id, COUNT(DISTINCT attendee_id) AS attendance_count
-    FROM RAW_SESSION_CHECKINS 
-    GROUP BY session_id
-) sc ON s.session_id = sc.session_id
-LEFT JOIN (
-    SELECT session_id, 
-           COUNT(*) AS feedback_count,
-           AVG(rating) AS avg_rating,
-           LISTAGG(feedback_text, ' | ') WITHIN GROUP (ORDER BY submitted_at DESC) AS sample_feedback
-    FROM (SELECT * FROM RAW_FEEDBACK QUALIFY ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY submitted_at DESC) <= 3)
-    GROUP BY session_id
-) fb ON s.session_id = fb.session_id;
+WITH SC AS (
+    SELECT
+        SESSION_ID,
+        COUNT(DISTINCT ATTENDEE_ID) AS ATTENDANCE_COUNT
+    FROM RAW_SESSION_CHECKINS
+    GROUP BY SESSION_ID
+),
+FB AS (
+    SELECT
+        SESSION_ID,
+        COUNT(*) AS FEEDBACK_COUNT,
+        AVG(RATING) AS AVG_RATING,
+        LISTAGG(FEEDBACK_TEXT, ' | ') WITHIN GROUP (
+            ORDER BY SUBMITTED_AT DESC
+        ) AS SAMPLE_FEEDBACK
+    FROM (
+        SELECT
+            SESSION_ID,
+            RATING,
+            FEEDBACK_TEXT,
+            SUBMITTED_AT
+        FROM RAW_FEEDBACK
+        QUALIFY
+            ROW_NUMBER()
+                OVER (PARTITION BY SESSION_ID ORDER BY SUBMITTED_AT DESC)
+            <= 3
+    )
+    GROUP BY SESSION_ID
+)
+SELECT
+    S.SESSION_ID,
+    S.SESSION_NAME,
+    S.SPEAKER,
+    S.TRACK,
+    S.ROOM,
+    S.CAPACITY,
+    S.START_TIME,
+    S.END_TIME,
+    FB.SAMPLE_FEEDBACK,
+    COALESCE(SC.ATTENDANCE_COUNT, 0) AS ATTENDANCE_COUNT,
+    ROUND(COALESCE(SC.ATTENDANCE_COUNT, 0) * 100.0 / NULLIF(S.CAPACITY, 0), 1)
+        AS CAPACITY_UTILIZATION_PCT,
+    COALESCE(FB.FEEDBACK_COUNT, 0) AS FEEDBACK_COUNT,
+    ROUND(COALESCE(FB.AVG_RATING, 0), 2) AS AVG_RATING
+FROM RAW_SESSIONS AS S
+LEFT JOIN SC ON S.SESSION_ID = SC.SESSION_ID
+LEFT JOIN FB ON S.SESSION_ID = FB.SESSION_ID;
 
 -- =============================================================================
 -- V_SPONSOR_ROI: Sponsor booth performance and ROI metrics
 -- =============================================================================
 CREATE OR REPLACE VIEW V_SPONSOR_ROI
-  COMMENT = 'DEMO: Sponsor booth ROI metrics | Author: SE Community | Expires: 2026-01-09'
+COMMENT
+= 'DEMO: Sponsor booth ROI metrics | Author: SE Community | Expires: 2026-01-09'
 AS
-SELECT 
-    sp.sponsor_id,
-    sp.sponsor_name,
-    sp.tier,
-    sp.booth_number,
-    sp.investment_amount,
-    COALESCE(bv.total_visits, 0) AS total_booth_visits,
-    COALESCE(bv.unique_visitors, 0) AS unique_visitors,
-    ROUND(COALESCE(bv.avg_duration, 0), 1) AS avg_visit_duration_sec,
+WITH BV AS (
+    SELECT
+        SPONSOR_NAME,
+        COUNT(*) AS TOTAL_VISITS,
+        COUNT(DISTINCT ATTENDEE_ID) AS UNIQUE_VISITORS,
+        AVG(DURATION_SECONDS) AS AVG_DURATION,
+        MODE(HOUR(VISIT_TIMESTAMP)) AS PEAK_HOUR
+    FROM RAW_BOOTH_VISITS
+    GROUP BY SPONSOR_NAME
+)
+SELECT
+    SP.SPONSOR_ID,
+    SP.SPONSOR_NAME,
+    SP.TIER,
+    SP.BOOTH_NUMBER,
+    SP.INVESTMENT_AMOUNT,
+    BV.PEAK_HOUR,
+    COALESCE(BV.TOTAL_VISITS, 0) AS TOTAL_BOOTH_VISITS,
+    COALESCE(BV.UNIQUE_VISITORS, 0) AS UNIQUE_VISITORS,
     -- Cost per visit
-    ROUND(sp.investment_amount / NULLIF(bv.total_visits, 0), 2) AS cost_per_visit,
+    ROUND(COALESCE(BV.AVG_DURATION, 0), 1) AS AVG_VISIT_DURATION_SEC,
     -- Cost per unique visitor
-    ROUND(sp.investment_amount / NULLIF(bv.unique_visitors, 0), 2) AS cost_per_unique_visitor,
+    ROUND(SP.INVESTMENT_AMOUNT / NULLIF(BV.TOTAL_VISITS, 0), 2)
+        AS COST_PER_VISIT,
     -- ROI Score (higher is better): visitors * avg_duration / investment * 1000
+    ROUND(SP.INVESTMENT_AMOUNT / NULLIF(BV.UNIQUE_VISITORS, 0), 2)
+        AS COST_PER_UNIQUE_VISITOR,
     ROUND(
-        (COALESCE(bv.unique_visitors, 0) * COALESCE(bv.avg_duration, 0)) / 
-        NULLIF(sp.investment_amount, 0) * 1000, 2
-    ) AS roi_score,
-    bv.peak_hour
-FROM RAW_SPONSORS sp
-LEFT JOIN (
-    SELECT 
-        sponsor_name,
-        COUNT(*) AS total_visits,
-        COUNT(DISTINCT attendee_id) AS unique_visitors,
-        AVG(duration_seconds) AS avg_duration,
-        MODE(HOUR(visit_timestamp)) AS peak_hour
-    FROM RAW_BOOTH_VISITS 
-    GROUP BY sponsor_name
-) bv ON sp.sponsor_name = bv.sponsor_name;
+        (COALESCE(BV.UNIQUE_VISITORS, 0) * COALESCE(BV.AVG_DURATION, 0))
+        / NULLIF(SP.INVESTMENT_AMOUNT, 0) * 1000, 2
+    ) AS ROI_SCORE
+FROM RAW_SPONSORS AS SP
+LEFT JOIN BV ON SP.SPONSOR_NAME = BV.SPONSOR_NAME;
 
 -- =============================================================================
 -- V_HOURLY_EVENT_METRICS: Time-series metrics for dashboards
 -- =============================================================================
 CREATE OR REPLACE VIEW V_HOURLY_EVENT_METRICS
-  COMMENT = 'DEMO: Hourly event metrics for dashboards | Author: SE Community | Expires: 2026-01-09'
+COMMENT
+= 'DEMO: Hourly event metrics for dashboards | Author: SE Community | Expires: 2026-01-09'
 AS
-SELECT 
-    DATE_TRUNC('hour', event_timestamp) AS hour,
-    event_type,
-    COUNT(*) AS event_count,
-    COUNT(DISTINCT attendee_id) AS unique_attendees
+SELECT
+    DATE_TRUNC('hour', EVENT_TIMESTAMP) AS HOUR,
+    EVENT_TYPE,
+    COUNT(*) AS EVENT_COUNT,
+    COUNT(DISTINCT ATTENDEE_ID) AS UNIQUE_ATTENDEES
 FROM (
-    SELECT checkin_timestamp AS event_timestamp, 'SESSION_CHECKIN' AS event_type, attendee_id FROM RAW_SESSION_CHECKINS
+    SELECT
+        CHECKIN_TIMESTAMP AS EVENT_TIMESTAMP,
+        'SESSION_CHECKIN' AS EVENT_TYPE,
+        ATTENDEE_ID
+    FROM RAW_SESSION_CHECKINS
     UNION ALL
-    SELECT visit_timestamp, 'BOOTH_VISIT', attendee_id FROM RAW_BOOTH_VISITS
+    SELECT
+        VISIT_TIMESTAMP,
+        'BOOTH_VISIT',
+        ATTENDEE_ID
+    FROM RAW_BOOTH_VISITS
     UNION ALL
-    SELECT submitted_at, 'FEEDBACK', attendee_id FROM RAW_FEEDBACK
+    SELECT
+        SUBMITTED_AT,
+        'FEEDBACK',
+        ATTENDEE_ID
+    FROM RAW_FEEDBACK
 )
 GROUP BY 1, 2
 ORDER BY 1, 2;
@@ -165,16 +209,17 @@ ORDER BY 1, 2;
 -- V_SPECIALTY_BREAKDOWN: Attendee specialty analytics
 -- =============================================================================
 CREATE OR REPLACE VIEW V_SPECIALTY_BREAKDOWN
-  COMMENT = 'DEMO: Attendee breakdown by specialty | Author: SE Community | Expires: 2026-01-09'
+COMMENT
+= 'DEMO: Attendee breakdown by specialty | Author: SE Community | Expires: 2026-01-09'
 AS
-SELECT 
-    specialty,
-    COUNT(*) AS attendee_count,
-    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 1) AS pct_of_total,
-    AVG(engagement_score) AS avg_engagement_score
+SELECT
+    SPECIALTY,
+    COUNT(*) AS ATTENDEE_COUNT,
+    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 1) AS PCT_OF_TOTAL,
+    AVG(ENGAGEMENT_SCORE) AS AVG_ENGAGEMENT_SCORE
 FROM V_ATTENDEE_ENGAGEMENT
-GROUP BY specialty
-ORDER BY attendee_count DESC;
+GROUP BY SPECIALTY
+ORDER BY ATTENDEE_COUNT DESC;
 
 -- Verify views created
-SELECT 'Views created successfully' AS status;
+SELECT 'Views created successfully' AS STATUS;
