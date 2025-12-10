@@ -20,10 +20,9 @@ import pandas as pd
 
 # =============================================================================
 # PAGE CONFIGURATION
+# Note: page_title and page_icon are NOT supported in Streamlit in Snowflake
 # =============================================================================
 st.set_page_config(
-    page_title="Event Intelligence Dashboard",
-    page_icon="🏥",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -212,10 +211,8 @@ sponsors_df = session.sql(sponsors_query).to_pandas()
 col1, col2 = st.columns([2, 1])
 
 with col1:
-    st.dataframe(
-        sponsors_df.style.background_gradient(subset=['ROI_SCORE'], cmap='Greens'),
-        use_container_width=True
-    )
+    # Note: pandas styling not reliably supported in Streamlit in Snowflake
+    st.dataframe(sponsors_df, use_container_width=True)
 
 with col2:
     # Tier distribution pie chart
