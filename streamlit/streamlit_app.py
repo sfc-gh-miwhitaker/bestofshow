@@ -64,12 +64,8 @@ st.markdown("""
 # =============================================================================
 # HEADER
 # =============================================================================
-col1, col2 = st.columns([3, 1])
-with col1:
-    st.markdown('<p class="main-header">🏥 Event Intelligence Dashboard</p>', unsafe_allow_html=True)
-    st.markdown('<p class="sub-header">International Wound Care Symposium | December 15-17, 2025</p>', unsafe_allow_html=True)
-with col2:
-    st.image("https://www.snowflake.com/wp-content/themes/flavor/flavor/library/img/logo.svg", width=150)
+st.markdown('<p class="main-header">🏥 Event Intelligence Dashboard</p>', unsafe_allow_html=True)
+st.markdown('<p class="sub-header">International Wound Care Symposium | December 15-17, 2025</p>', unsafe_allow_html=True)
 
 st.divider()
 

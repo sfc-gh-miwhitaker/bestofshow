@@ -131,11 +131,38 @@ SHOW AGENTS IN SCHEMA SNOWFLAKE_EXAMPLE.EVENT_INTELLIGENCE;
 DESCRIBE AGENT event_intelligence_agent;
 
 -- =============================================================================
+-- ENABLE AGENT IN SNOWFLAKE INTELLIGENCE
+-- Per docs: Agents must be added to the Snowflake Intelligence object to be 
+-- visible in the Snowflake Intelligence interface
+--
+-- IMPORTANT: Creating Snowflake Intelligence object requires ACCOUNTADMIN role
+-- =============================================================================
+
+-- Step 1: Switch to ACCOUNTADMIN (required for CREATE SNOWFLAKE INTELLIGENCE)
+USE ROLE ACCOUNTADMIN;
+
+-- Step 2: Create Snowflake Intelligence object if it doesn't exist 
+-- (account-level, only one can exist per account)
+CREATE SNOWFLAKE INTELLIGENCE IF NOT EXISTS SNOWFLAKE_INTELLIGENCE_OBJECT_DEFAULT
+  COMMENT = 'Central object for managing agent visibility in Snowflake Intelligence UI';
+
+-- Step 3: Grant privileges so other roles can use it
+GRANT USAGE ON SNOWFLAKE INTELLIGENCE SNOWFLAKE_INTELLIGENCE_OBJECT_DEFAULT TO ROLE PUBLIC;
+GRANT MODIFY ON SNOWFLAKE INTELLIGENCE SNOWFLAKE_INTELLIGENCE_OBJECT_DEFAULT TO ROLE SYSADMIN;
+
+-- Step 4: Add the agent to Snowflake Intelligence for visibility
+ALTER SNOWFLAKE INTELLIGENCE SNOWFLAKE_INTELLIGENCE_OBJECT_DEFAULT 
+  ADD AGENT SNOWFLAKE_EXAMPLE.EVENT_INTELLIGENCE.event_intelligence_agent;
+
+-- Step 5: Verify configuration
+SHOW SNOWFLAKE INTELLIGENCES;
+
+-- =============================================================================
 -- GRANT ACCESS TO AGENT (for demo users)
 -- =============================================================================
 -- Note: Uncomment and modify these grants based on your role structure
 -- GRANT USAGE ON AGENT event_intelligence_agent TO ROLE PUBLIC;
 -- GRANT USAGE ON SEMANTIC VIEW SNOWFLAKE_EXAMPLE.SEMANTIC_MODELS.SV_EVENT_ANALYTICS TO ROLE PUBLIC;
 
-SELECT 'Cortex Agent created successfully. Access via Snowsight AI Assistant or REST API.' AS status;
+SELECT 'Cortex Agent created and enabled in Snowflake Intelligence. Access via Snowsight > AI & ML > Agents.' AS status;
 
