@@ -45,12 +45,6 @@ repos:
         language: system
         pass_filenames: false
 
-      - id: check-personal-names
-        name: Check for personal names (anonymization)
-        entry: bash -c 'if git diff --cached | grep -iE "(michael|whitaker)" | grep -v "miwhitaker" | grep -v "sfc-gh-miwhitaker" | grep -v "SE Community"; then echo "WARNING - Personal name detected - ensure SE Community attribution"; exit 0; fi'
-        language: system
-        pass_filenames: false
-
   # SQL-specific checks (optional - disabled for demo projects)
   # Uncomment to enable strict SQL linting:
   # - repo: https://github.com/sqlfluff/sqlfluff
