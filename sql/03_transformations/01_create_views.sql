@@ -15,7 +15,9 @@ USE SCHEMA EVENT_INTELLIGENCE;
 -- =============================================================================
 -- V_ATTENDEE_ENGAGEMENT: Real-time attendee engagement metrics
 -- =============================================================================
-CREATE OR REPLACE VIEW V_ATTENDEE_ENGAGEMENT AS
+CREATE OR REPLACE VIEW V_ATTENDEE_ENGAGEMENT
+  COMMENT = 'DEMO: Real-time attendee engagement metrics | Author: SE Community | Expires: 2026-01-09'
+AS
 SELECT 
     a.attendee_id,
     a.first_name || ' ' || a.last_name AS full_name,
@@ -60,13 +62,14 @@ LEFT JOIN (
            MAX(submitted_at) AS last_feedback
     FROM RAW_FEEDBACK 
     GROUP BY attendee_id
-) fb ON a.attendee_id = fb.attendee_id
-COMMENT = 'DEMO: Real-time attendee engagement metrics | Author: SE Community | Expires: 2026-01-09';
+) fb ON a.attendee_id = fb.attendee_id;
 
 -- =============================================================================
 -- V_SESSION_PERFORMANCE: Session attendance and feedback metrics
 -- =============================================================================
-CREATE OR REPLACE VIEW V_SESSION_PERFORMANCE AS
+CREATE OR REPLACE VIEW V_SESSION_PERFORMANCE
+  COMMENT = 'DEMO: Session attendance and feedback metrics | Author: SE Community | Expires: 2026-01-09'
+AS
 SELECT 
     s.session_id,
     s.session_name,
@@ -94,13 +97,14 @@ LEFT JOIN (
            LISTAGG(feedback_text, ' | ') WITHIN GROUP (ORDER BY submitted_at DESC) AS sample_feedback
     FROM (SELECT * FROM RAW_FEEDBACK QUALIFY ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY submitted_at DESC) <= 3)
     GROUP BY session_id
-) fb ON s.session_id = fb.session_id
-COMMENT = 'DEMO: Session attendance and feedback metrics | Author: SE Community | Expires: 2026-01-09';
+) fb ON s.session_id = fb.session_id;
 
 -- =============================================================================
 -- V_SPONSOR_ROI: Sponsor booth performance and ROI metrics
 -- =============================================================================
-CREATE OR REPLACE VIEW V_SPONSOR_ROI AS
+CREATE OR REPLACE VIEW V_SPONSOR_ROI
+  COMMENT = 'DEMO: Sponsor booth ROI metrics | Author: SE Community | Expires: 2026-01-09'
+AS
 SELECT 
     sp.sponsor_id,
     sp.sponsor_name,
@@ -130,13 +134,14 @@ LEFT JOIN (
         MODE(HOUR(visit_timestamp)) AS peak_hour
     FROM RAW_BOOTH_VISITS 
     GROUP BY sponsor_name
-) bv ON sp.sponsor_name = bv.sponsor_name
-COMMENT = 'DEMO: Sponsor booth ROI metrics | Author: SE Community | Expires: 2026-01-09';
+) bv ON sp.sponsor_name = bv.sponsor_name;
 
 -- =============================================================================
 -- V_HOURLY_EVENT_METRICS: Time-series metrics for dashboards
 -- =============================================================================
-CREATE OR REPLACE VIEW V_HOURLY_EVENT_METRICS AS
+CREATE OR REPLACE VIEW V_HOURLY_EVENT_METRICS
+  COMMENT = 'DEMO: Hourly event metrics for dashboards | Author: SE Community | Expires: 2026-01-09'
+AS
 SELECT 
     DATE_TRUNC('hour', event_timestamp) AS hour,
     event_type,
@@ -150,13 +155,14 @@ FROM (
     SELECT submitted_at, 'FEEDBACK', attendee_id FROM RAW_FEEDBACK
 )
 GROUP BY 1, 2
-ORDER BY 1, 2
-COMMENT = 'DEMO: Hourly event metrics for dashboards | Author: SE Community | Expires: 2026-01-09';
+ORDER BY 1, 2;
 
 -- =============================================================================
 -- V_SPECIALTY_BREAKDOWN: Attendee specialty analytics
 -- =============================================================================
-CREATE OR REPLACE VIEW V_SPECIALTY_BREAKDOWN AS
+CREATE OR REPLACE VIEW V_SPECIALTY_BREAKDOWN
+  COMMENT = 'DEMO: Attendee breakdown by specialty | Author: SE Community | Expires: 2026-01-09'
+AS
 SELECT 
     specialty,
     COUNT(*) AS attendee_count,
@@ -164,9 +170,7 @@ SELECT
     AVG(engagement_score) AS avg_engagement_score
 FROM V_ATTENDEE_ENGAGEMENT
 GROUP BY specialty
-ORDER BY attendee_count DESC
-COMMENT = 'DEMO: Attendee breakdown by specialty | Author: SE Community | Expires: 2026-01-09';
+ORDER BY attendee_count DESC;
 
 -- Verify views created
 SELECT 'Views created successfully' AS status;
-

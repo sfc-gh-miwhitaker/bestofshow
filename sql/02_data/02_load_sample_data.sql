@@ -93,76 +93,82 @@ VALUES
     (15, 'Telemedicine Platforms Inc', 'Bronze', 'D-406', 10000.00, 'info@telemedplatforms.com');
 
 -- =============================================================================
--- GENERATE BOOTH VISITS
+-- GENERATE BOOTH VISITS (with proper sponsor distribution from the start)
 -- =============================================================================
 INSERT INTO RAW_BOOTH_VISITS (visit_id, attendee_id, booth_id, sponsor_name, visit_timestamp, duration_seconds)
 SELECT 
-    ROW_NUMBER() OVER (ORDER BY RANDOM()) AS visit_id,
+    ROW_NUMBER() OVER (ORDER BY seq) AS visit_id,
     UNIFORM(1, 500, RANDOM()) AS attendee_id,
-    s.sponsor_id AS booth_id,
-    s.sponsor_name,
+    sponsor_id AS booth_id,
+    sponsor_name,
     DATEADD('minute', UNIFORM(0, 2880, RANDOM()), '2025-12-15 08:00:00'::TIMESTAMP_NTZ) AS visit_timestamp,
     UNIFORM(30, 1200, RANDOM()) AS duration_seconds
-FROM TABLE(GENERATOR(ROWCOUNT => 2000)) g
-CROSS JOIN (SELECT sponsor_id, sponsor_name FROM RAW_SPONSORS ORDER BY RANDOM() LIMIT 1) s;
-
--- Update booth visits to have proper sponsor distribution
-UPDATE RAW_BOOTH_VISITS 
-SET sponsor_name = (SELECT sponsor_name FROM RAW_SPONSORS WHERE sponsor_id = MOD(booth_id, 15) + 1),
-    booth_id = MOD(booth_id, 15) + 1;
+FROM (
+    -- Generate 2000 rows and join with sponsors to distribute evenly
+    SELECT 
+        SEQ4() AS seq,
+        MOD(SEQ4(), 15) + 1 AS sponsor_idx
+    FROM TABLE(GENERATOR(ROWCOUNT => 2000))
+) gen
+JOIN RAW_SPONSORS ON sponsor_id = sponsor_idx;
 
 -- =============================================================================
--- GENERATE SESSION CHECKINS
+-- GENERATE SESSION CHECKINS (with proper session distribution from the start)
 -- =============================================================================
 INSERT INTO RAW_SESSION_CHECKINS (checkin_id, attendee_id, session_id, checkin_timestamp, checkin_method)
 SELECT 
-    ROW_NUMBER() OVER (ORDER BY RANDOM()) AS checkin_id,
+    ROW_NUMBER() OVER (ORDER BY seq) AS checkin_id,
     UNIFORM(1, 500, RANDOM()) AS attendee_id,
     s.session_id,
     DATEADD('minute', UNIFORM(-5, 10, RANDOM()), s.start_time) AS checkin_timestamp,
     ARRAY_CONSTRUCT('BADGE_SCAN', 'MOBILE_APP', 'MANUAL')[UNIFORM(0, 2, RANDOM())] AS checkin_method
-FROM TABLE(GENERATOR(ROWCOUNT => 1500)) g
-CROSS JOIN (SELECT session_id, start_time FROM RAW_SESSIONS ORDER BY RANDOM() LIMIT 1) s;
-
--- Distribute check-ins across sessions properly
-UPDATE RAW_SESSION_CHECKINS c
-SET session_id = MOD(checkin_id, 25) + 1,
-    checkin_timestamp = (SELECT DATEADD('minute', UNIFORM(-5, 10, RANDOM()), start_time) 
-                         FROM RAW_SESSIONS WHERE session_id = MOD(c.checkin_id, 25) + 1);
+FROM (
+    -- Generate 1500 rows and distribute across sessions
+    SELECT 
+        SEQ4() AS seq,
+        MOD(SEQ4(), 25) + 1 AS session_idx
+    FROM TABLE(GENERATOR(ROWCOUNT => 1500))
+) gen
+JOIN RAW_SESSIONS s ON s.session_id = session_idx;
 
 -- =============================================================================
--- GENERATE FEEDBACK
+-- GENERATE FEEDBACK (with proper session distribution)
 -- =============================================================================
 INSERT INTO RAW_FEEDBACK (feedback_id, attendee_id, session_id, rating, feedback_text, submitted_at)
 SELECT 
-    ROW_NUMBER() OVER (ORDER BY RANDOM()) AS feedback_id,
+    ROW_NUMBER() OVER (ORDER BY seq) AS feedback_id,
     UNIFORM(1, 500, RANDOM()) AS attendee_id,
-    MOD(feedback_id, 25) + 1 AS session_id,
+    session_idx AS session_id,
     UNIFORM(3, 5, RANDOM()) AS rating,
-    CASE UNIFORM(1, 20, RANDOM())
-        WHEN 1 THEN 'Excellent presentation! Very informative and practical for my daily practice.'
-        WHEN 2 THEN 'Great content but the room was too crowded. Consider a larger venue next time.'
-        WHEN 3 THEN 'The speaker was knowledgeable and engaging. Learned several new techniques.'
-        WHEN 4 THEN 'Good overview but would have liked more hands-on demonstrations.'
-        WHEN 5 THEN 'Outstanding session! The case studies were particularly helpful.'
-        WHEN 6 THEN 'Valuable information on latest research. Will implement in my practice.'
-        WHEN 7 THEN 'The Q&A session was too short. Would have appreciated more time for questions.'
-        WHEN 8 THEN 'Excellent speaker! Clear explanations and great visual aids.'
-        WHEN 9 THEN 'Content was somewhat basic for experienced practitioners.'
-        WHEN 10 THEN 'Very practical session with actionable takeaways.'
-        WHEN 11 THEN 'The networking opportunity was valuable. Met great colleagues.'
-        WHEN 12 THEN 'Would recommend this session to colleagues. Well organized.'
-        WHEN 13 THEN 'Appreciated the evidence-based approach to the topic.'
-        WHEN 14 THEN 'Audio quality could be improved. Hard to hear at times.'
-        WHEN 15 THEN 'Fantastic session! One of the best at this conference.'
-        WHEN 16 THEN 'Good content but slides were too text-heavy.'
-        WHEN 17 THEN 'Learned new approaches to managing complex wounds.'
-        WHEN 18 THEN 'The handouts provided were very useful reference materials.'
-        WHEN 19 THEN 'Session ran over time but the content was worth it.'
+    CASE MOD(seq, 20)
+        WHEN 0 THEN 'Excellent presentation! Very informative and practical for my daily practice.'
+        WHEN 1 THEN 'Great content but the room was too crowded. Consider a larger venue next time.'
+        WHEN 2 THEN 'The speaker was knowledgeable and engaging. Learned several new techniques.'
+        WHEN 3 THEN 'Good overview but would have liked more hands-on demonstrations.'
+        WHEN 4 THEN 'Outstanding session! The case studies were particularly helpful.'
+        WHEN 5 THEN 'Valuable information on latest research. Will implement in my practice.'
+        WHEN 6 THEN 'The Q&A session was too short. Would have appreciated more time for questions.'
+        WHEN 7 THEN 'Excellent speaker! Clear explanations and great visual aids.'
+        WHEN 8 THEN 'Content was somewhat basic for experienced practitioners.'
+        WHEN 9 THEN 'Very practical session with actionable takeaways.'
+        WHEN 10 THEN 'The networking opportunity was valuable. Met great colleagues.'
+        WHEN 11 THEN 'Would recommend this session to colleagues. Well organized.'
+        WHEN 12 THEN 'Appreciated the evidence-based approach to the topic.'
+        WHEN 13 THEN 'Audio quality could be improved. Hard to hear at times.'
+        WHEN 14 THEN 'Fantastic session! One of the best at this conference.'
+        WHEN 15 THEN 'Good content but slides were too text-heavy.'
+        WHEN 16 THEN 'Learned new approaches to managing complex wounds.'
+        WHEN 17 THEN 'The handouts provided were very useful reference materials.'
+        WHEN 18 THEN 'Session ran over time but the content was worth it.'
         ELSE 'Informative session with good balance of theory and practice.'
     END AS feedback_text,
     DATEADD('hour', UNIFORM(1, 48, RANDOM()), '2025-12-15 10:00:00'::TIMESTAMP_NTZ) AS submitted_at
-FROM TABLE(GENERATOR(ROWCOUNT => 800));
+FROM (
+    SELECT 
+        SEQ4() AS seq,
+        MOD(SEQ4(), 25) + 1 AS session_idx
+    FROM TABLE(GENERATOR(ROWCOUNT => 800))
+) gen;
 
 -- =============================================================================
 -- VERIFY DATA LOAD
@@ -173,4 +179,3 @@ UNION ALL SELECT 'RAW_SPONSORS', COUNT(*) FROM RAW_SPONSORS
 UNION ALL SELECT 'RAW_BOOTH_VISITS', COUNT(*) FROM RAW_BOOTH_VISITS
 UNION ALL SELECT 'RAW_SESSION_CHECKINS', COUNT(*) FROM RAW_SESSION_CHECKINS
 UNION ALL SELECT 'RAW_FEEDBACK', COUNT(*) FROM RAW_FEEDBACK;
-

@@ -22,7 +22,9 @@ USE WAREHOUSE SFE_EVENT_INTELLIGENCE_WH;
 -- FEEDBACK SENTIMENT ANALYSIS
 -- =============================================================================
 -- Add sentiment scores to feedback using Cortex SENTIMENT function
-CREATE OR REPLACE TABLE FEEDBACK_WITH_SENTIMENT AS
+CREATE OR REPLACE TABLE FEEDBACK_WITH_SENTIMENT
+  COMMENT = 'DEMO: Feedback with Cortex AI sentiment analysis | Author: SE Community | Expires: 2026-01-09'
+AS
 SELECT 
     f.*,
     SNOWFLAKE.CORTEX.SENTIMENT(f.feedback_text) AS sentiment_score,
@@ -35,14 +37,13 @@ FROM RAW_FEEDBACK f
 WHERE f.feedback_text IS NOT NULL
   AND LENGTH(f.feedback_text) > 10;
 
--- Add comment to table
-ALTER TABLE FEEDBACK_WITH_SENTIMENT SET COMMENT = 'DEMO: Feedback with Cortex AI sentiment analysis | Author: SE Community | Expires: 2026-01-09';
-
 -- =============================================================================
 -- SESSION FEEDBACK SUMMARIES
 -- =============================================================================
 -- Generate AI summaries of feedback for each session
-CREATE OR REPLACE TABLE SESSION_FEEDBACK_SUMMARIES AS
+CREATE OR REPLACE TABLE SESSION_FEEDBACK_SUMMARIES
+  COMMENT = 'DEMO: AI-generated session feedback summaries | Author: SE Community | Expires: 2026-01-09'
+AS
 WITH session_feedback_agg AS (
     SELECT 
         session_id,
@@ -70,14 +71,13 @@ SELECT
 FROM session_feedback_agg sfa
 JOIN RAW_SESSIONS s ON sfa.session_id = s.session_id;
 
--- Add comment to table
-ALTER TABLE SESSION_FEEDBACK_SUMMARIES SET COMMENT = 'DEMO: AI-generated session feedback summaries | Author: SE Community | Expires: 2026-01-09';
-
 -- =============================================================================
 -- SPONSOR ENGAGEMENT INSIGHTS
 -- =============================================================================
 -- Generate AI insights for sponsor performance
-CREATE OR REPLACE TABLE SPONSOR_AI_INSIGHTS AS
+CREATE OR REPLACE TABLE SPONSOR_AI_INSIGHTS
+  COMMENT = 'DEMO: AI-generated sponsor performance insights | Author: SE Community | Expires: 2026-01-09'
+AS
 WITH sponsor_metrics AS (
     SELECT 
         sp.sponsor_name,
@@ -108,13 +108,12 @@ SELECT
     CURRENT_TIMESTAMP() AS generated_at
 FROM sponsor_metrics sm;
 
--- Add comment to table
-ALTER TABLE SPONSOR_AI_INSIGHTS SET COMMENT = 'DEMO: AI-generated sponsor performance insights | Author: SE Community | Expires: 2026-01-09';
-
 -- =============================================================================
 -- VIEW: V_FEEDBACK_SENTIMENT_ANALYSIS
 -- =============================================================================
-CREATE OR REPLACE VIEW V_FEEDBACK_SENTIMENT_ANALYSIS AS
+CREATE OR REPLACE VIEW V_FEEDBACK_SENTIMENT_ANALYSIS
+  COMMENT = 'DEMO: Feedback with sentiment analysis | Author: SE Community | Expires: 2026-01-09'
+AS
 SELECT 
     fs.feedback_id,
     fs.attendee_id,
@@ -134,8 +133,7 @@ SELECT
         ELSE 'Misaligned'
     END AS rating_sentiment_alignment
 FROM FEEDBACK_WITH_SENTIMENT fs
-JOIN RAW_SESSIONS s ON fs.session_id = s.session_id
-COMMENT = 'DEMO: Feedback with sentiment analysis | Author: SE Community | Expires: 2026-01-09';
+JOIN RAW_SESSIONS s ON fs.session_id = s.session_id;
 
 -- =============================================================================
 -- VERIFY CORTEX AI ARTIFACTS
@@ -143,4 +141,3 @@ COMMENT = 'DEMO: Feedback with sentiment analysis | Author: SE Community | Expir
 SELECT 'FEEDBACK_WITH_SENTIMENT' AS table_name, COUNT(*) AS row_count FROM FEEDBACK_WITH_SENTIMENT
 UNION ALL SELECT 'SESSION_FEEDBACK_SUMMARIES', COUNT(*) FROM SESSION_FEEDBACK_SUMMARIES
 UNION ALL SELECT 'SPONSOR_AI_INSIGHTS', COUNT(*) FROM SPONSOR_AI_INSIGHTS;
-
