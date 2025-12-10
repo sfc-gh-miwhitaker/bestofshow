@@ -1,0 +1,36 @@
+name: Expire Demo
+
+on:
+  schedule:
+    - cron: "0 9 * * *" # daily 09:00 UTC
+  workflow_dispatch:
+
+env:
+  EXPIRES_ON: "2026-01-09"
+
+jobs:
+  expire:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check and archive if expired
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const expires = new Date(process.env.EXPIRES_ON);
+            const today = new Date();
+            const repo = context.repo;
+
+            core.info(`Today: ${today.toISOString().slice(0,10)} | Expires: ${process.env.EXPIRES_ON}`);
+
+            if (today > expires) {
+              core.notice(`Repository expired on ${process.env.EXPIRES_ON}. Archiving and making private.`);
+              await github.rest.repos.update({
+                owner: repo.owner,
+                repo: repo.repo,
+                archived: true,
+                private: true
+              });
+            } else {
+              core.info(`Repository still active until ${process.env.EXPIRES_ON}. No action taken.`);
+            }
+
