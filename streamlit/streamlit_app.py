@@ -214,8 +214,7 @@ col1, col2 = st.columns([2, 1])
 with col1:
     st.dataframe(
         sponsors_df.style.background_gradient(subset=['ROI_SCORE'], cmap='Greens'),
-        use_container_width=True,
-        hide_index=True
+        use_container_width=True
     )
 
 with col2:
@@ -301,7 +300,7 @@ try:
     with col1:
         st.bar_chart(sentiment_df.set_index('SENTIMENT_CATEGORY')['COUNT'])
     with col2:
-        st.dataframe(sentiment_df, use_container_width=True, hide_index=True)
+        st.dataframe(sentiment_df, use_container_width=True)
         
 except Exception as e:
     st.info("💡 Run the Cortex AI scripts (sql/04_cortex/) to enable sentiment analysis.")
