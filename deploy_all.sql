@@ -115,24 +115,24 @@ USE SCHEMA EVENT_INTELLIGENCE;
 -- STEP 7: EXECUTE SQL SCRIPTS FROM GIT REPOSITORY
 -- ============================================================================
 
--- 6.1: Setup Scripts
+-- 7.1: Setup Scripts
 EXECUTE IMMEDIATE FROM @SNOWFLAKE_EXAMPLE.EVENT_INTELLIGENCE_GIT_REPOS.sfe_event_intelligence_repo/branches/main/sql/01_setup/01_create_database.sql;
 EXECUTE IMMEDIATE FROM @SNOWFLAKE_EXAMPLE.EVENT_INTELLIGENCE_GIT_REPOS.sfe_event_intelligence_repo/branches/main/sql/01_setup/02_create_schemas.sql;
 
--- 6.2: Data Tables & Sample Data
+-- 7.2: Data Tables & Sample Data
 EXECUTE IMMEDIATE FROM @SNOWFLAKE_EXAMPLE.EVENT_INTELLIGENCE_GIT_REPOS.sfe_event_intelligence_repo/branches/main/sql/02_data/01_create_tables.sql;
 EXECUTE IMMEDIATE FROM @SNOWFLAKE_EXAMPLE.EVENT_INTELLIGENCE_GIT_REPOS.sfe_event_intelligence_repo/branches/main/sql/02_data/02_load_sample_data.sql;
 
--- 6.3: Transformations (Views & Dynamic Tables)
+-- 7.3: Transformations (Views & Dynamic Tables)
 EXECUTE IMMEDIATE FROM @SNOWFLAKE_EXAMPLE.EVENT_INTELLIGENCE_GIT_REPOS.sfe_event_intelligence_repo/branches/main/sql/03_transformations/01_create_views.sql;
 EXECUTE IMMEDIATE FROM @SNOWFLAKE_EXAMPLE.EVENT_INTELLIGENCE_GIT_REPOS.sfe_event_intelligence_repo/branches/main/sql/03_transformations/02_create_dynamic_tables.sql;
 
--- 6.4: Cortex AI Features
+-- 7.4: Cortex AI Features
 EXECUTE IMMEDIATE FROM @SNOWFLAKE_EXAMPLE.EVENT_INTELLIGENCE_GIT_REPOS.sfe_event_intelligence_repo/branches/main/sql/04_cortex/01_create_semantic_view.sql;
 EXECUTE IMMEDIATE FROM @SNOWFLAKE_EXAMPLE.EVENT_INTELLIGENCE_GIT_REPOS.sfe_event_intelligence_repo/branches/main/sql/04_cortex/02_cortex_llm_functions.sql;
 EXECUTE IMMEDIATE FROM @SNOWFLAKE_EXAMPLE.EVENT_INTELLIGENCE_GIT_REPOS.sfe_event_intelligence_repo/branches/main/sql/04_cortex/03_create_agent.sql;
 
--- 6.5: Streamlit Dashboard
+-- 7.5: Streamlit Dashboard
 EXECUTE IMMEDIATE FROM @SNOWFLAKE_EXAMPLE.EVENT_INTELLIGENCE_GIT_REPOS.sfe_event_intelligence_repo/branches/main/sql/05_streamlit/01_create_dashboard.sql;
 
 -- ============================================================================
