@@ -15,6 +15,10 @@
  * ============================================================================
  */
 
+-- ============================================================================
+-- CONTEXT SETTING (MANDATORY)
+-- ============================================================================
+USE ROLE SYSADMIN;
 USE DATABASE SNOWFLAKE_EXAMPLE;
 USE SCHEMA EVENT_INTELLIGENCE;
 USE WAREHOUSE SFE_EVENT_INTELLIGENCE_WH;

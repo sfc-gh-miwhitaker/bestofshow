@@ -27,20 +27,28 @@
  */
 
 -- ============================================================================
--- STEP 0: EXPIRATION GUARD
+-- STEP 0: EXPIRATION CHECK (MANDATORY)
 -- ============================================================================
--- Halts execution if demo is past expiration date
-EXECUTE IMMEDIATE
-$$
-DECLARE
-    v_expiration_date DATE := '2026-01-09';
-    demo_expired EXCEPTION (-20001, 'DEMO EXPIRED: This project expired on 2026-01-09. Please contact the SE team for an updated version.');
-BEGIN
-    IF (CURRENT_DATE() > v_expiration_date) THEN
-        RAISE demo_expired;
-    END IF;
-END;
-$$;
+-- This demo expires 30 days after creation.
+-- If expired, deployment should be halted and the repository forked with updated dates.
+-- Expiration date: 2026-01-09
+
+-- Display expiration status (canonical pattern per demo-expiration-automation.mdc)
+SELECT 
+    '2026-01-09'::DATE AS expiration_date,
+    CURRENT_DATE() AS current_date,
+    DATEDIFF('day', CURRENT_DATE(), '2026-01-09'::DATE) AS days_remaining,
+    CASE 
+        WHEN DATEDIFF('day', CURRENT_DATE(), '2026-01-09'::DATE) < 0 
+        THEN '🚫 EXPIRED - Do not deploy. Fork repository and update expiration date.'
+        WHEN DATEDIFF('day', CURRENT_DATE(), '2026-01-09'::DATE) <= 7
+        THEN '⚠️  EXPIRING SOON - ' || DATEDIFF('day', CURRENT_DATE(), '2026-01-09'::DATE) || ' days remaining'
+        ELSE '✅ ACTIVE - ' || DATEDIFF('day', CURRENT_DATE(), '2026-01-09'::DATE) || ' days remaining'
+    END AS demo_status;
+
+-- ⚠️  MANUAL CHECK REQUIRED:
+-- If the demo_status shows "🚫 EXPIRED", STOP HERE and do not proceed with deployment.
+-- Fork the repository and update the expiration date before deploying.
 
 -- ============================================================================
 -- STEP 1: CREATE WAREHOUSE (Account-level, SFE_ prefix)

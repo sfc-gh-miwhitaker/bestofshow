@@ -3,6 +3,10 @@
 -- Safe to re-run; uses IF NOT EXISTS.
 -- Author: SE Community | Created: 2025-12-10 | Expires: 2026-01-09
 
+-- ============================================================================
+-- CONTEXT SETTING (MANDATORY)
+-- ============================================================================
+USE ROLE SYSADMIN;
 USE DATABASE SNOWFLAKE_EXAMPLE;
 
 CREATE SCHEMA IF NOT EXISTS EVENT_INTELLIGENCE
